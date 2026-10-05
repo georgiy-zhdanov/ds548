@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Предложить мероприятие{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card p-4">
+                <h2 class="mb-4"><i class="bi bi-calendar-plus"></i> Предложить мероприятие</h2>
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> Ваше мероприятие будет опубликовано после одобрения администратором.
+                </div>
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control", placeholder="Например: Хакатон по машинному обучению") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows=5, placeholder="Подробное описание мероприятия...") }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.event_date.label(class="form-label") }}
+                            {{ form.event_date(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.location.label(class="form-label") }}
+                            {{ form.location(class="form-control", placeholder="Аудитория 305 / Онлайн") }}
+                        </div>
+                    </div>
+                    {{ form.submit(class="btn btn-primary w-100") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

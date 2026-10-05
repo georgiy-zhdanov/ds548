@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Админ-панель{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <h1><i class="bi bi-shield-lock"></i> Админ-панель</h1>
+    
+    <div class="row g-4 mt-4">
+        <div class="col-md-3">
+            <div class="card p-4 text-center bg-primary text-white">
+                <h2>{{ users_count }}</h2>
+                <p class="mb-0">Пользователей</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-4 text-center bg-success text-white">
+                <h2>{{ articles_count }}</h2>
+                <p class="mb-0">Статей</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-4 text-center bg-warning text-dark">
+                <h2>{{ tests_count }}</h2>
+                <p class="mb-0">Тестов</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-4 text-center bg-info text-white">
+                <h2>{{ questions_count }}</h2>
+                <p class="mb-0">Вопросов</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модерация мероприятий -->
+    {% if pending_events_count > 0 %}
+    <div class="alert alert-warning mt-4">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-exclamation-triangle"></i>
+                <strong>{{ pending_events_count }}</strong> мероприятий ожидают одобрения
+            </div>
+            <a href="{{ url_for('admin_events') }}" class="btn btn-warning">
+                <i class="bi bi-check-circle"></i> Модерировать
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <a href="{{ url_for('admin_events') }}" class="btn btn-outline-primary">
+            <i class="bi bi-calendar-check"></i> Управление мероприятиями
+        </a>
+    </div>
+
+    <h3 class="mt-5">Зарегистрированные пользователи</h3>
+    <div class="table-responsive mt-3">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Имя пользователя</th>
+                    <th>Email</th>
+                    <th>Роль</th>
+                    <th>Дата регистрации</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.is_admin %}
+                            <span class="badge bg-danger">Админ</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Пользователь</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
