@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}{{ problem.title }}{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('contest_list') }}">Контесты</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('contest_detail', cid=contest.id) }}">{{ contest.title }}</a></li>
+            <li class="breadcrumb-item active">{{ problem.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="card p-4 mb-4">
+        <h2>{{ problem.title }}</h2>
+        <div class="mb-3">
+            <span class="badge bg-{% if problem.difficulty == 'easy' %}success{% elif problem.difficulty == 'medium' %}warning{% else %}danger{% endif %}">
+                {{ problem.difficulty }}
+            </span>
+            <span class="badge bg-info">{{ problem.problem_type }}</span>
+            <span class="badge bg-secondary">{{ problem.max_score }} баллов</span>
+            {% if problem.problem_type == 'code' %}
+                <span class="badge bg-dark">{{ problem.time_limit }} сек</span>
+                <span class="badge bg-dark">{{ problem.memory_limit }} МБ</span>
+            {% endif %}
+        </div>
+        <div class="problem-statement">
+            {{ problem.description|safe }}
+        </div>
+    </div>
+
+    {% if problem.problem_type == 'code' %}
+        <!-- Code задача -->
+        {% if sample_tests %}
+        <div class="card p-4 mb-4">
+            <h4><i class="bi bi-code-square"></i> Примеры тестов</h4>
+            {% for test in sample_tests %}
+            <div class="mb-3">
+                <strong>Входные данные:</strong>
+                <pre class="bg-light p-2 border">{{ test.input_data }}</pre>
+                <strong>Выходные данные:</strong>
+                <pre class="bg-light p-2 border">{{ test.expected_output }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if participation %}
+        <div class="card p-4">
+            <h4><i class="bi bi-send"></i> Отправить решение</h4>
+            <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}">
+                {{ form.hidden_tag() }}
+                <div class="mb-3">
+                    {{ form.code.label(class="form-label") }}
+                    {{ form.code(class="form-control font-monospace", rows=15, placeholder="# Ваш код на Python") }}
+                </div>
+                {{ form.submit(class="btn btn-primary") }}
+            </form>
+        </div>
+        {% endif %}
+
+    {% elif problem.problem_type == 'math' %}
+        <!-- Math задача -->
+        {% if participation %}
+            {% if existing_math_submission %}
+                <!-- Попытка уже была — показываем результат -->
+                <div class="card p-4 mb-4">
+                    <h4><i class="bi bi-check-circle"></i> Ваши ответы</h4>
+                    <div class="alert alert-info">
+                        <strong>Вы уже отправили ответы на эту задачу.</strong><br>
+                        Ваш результат: <strong>{{ existing_math_submission.score }}/{{ problem.max_score }}</strong> баллов
+                    </div>
+                    
+                    {% if existing_math_submission.details %}
+                        {% set details = existing_math_submission.details|from_json %}
+                        {% if details.questions is defined %}
+                        <div class="mt-3">
+                            <h5>Детализация ответов:</h5>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Вопрос</th>
+                                        <th>Ваш ответ</th>
+                                        <th>Результат</th>
+                                        <th>Баллы</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for q_result in details.questions %}
+                                    <tr>
+                                        <td>Вопрос {{ loop.index }}</td>
+                                        <td><code>{{ q_result.user_answer if q_result.user_answer else '(пусто)' }}</code></td>
+                                        <td>
+                                            {% if q_result.is_correct %}
+                                                <span class="badge bg-success">✅ Верно</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">❌ Неверно</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ q_result.points }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% else %}
+                <!-- Попытки ещё не было — показываем форму -->
+                <div class="card p-4">
+                    <h4><i class="bi bi-pencil-square"></i> Ответьте на вопросы</h4>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Внимание:</strong> У вас есть только одна попытка! После отправки изменить ответы будет невозможно.
+                    </div>
+                    <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" onsubmit="return confirm('Вы уверены? После отправки изменить ответы будет невозможно!')">
+                        {% for q in questions %}
+                        <div class="mb-4 p-3 border rounded">
+                            <p><strong>Вопрос {{ loop.index }} ({{ q.points }} баллов):</strong></p>
+                            <p>{{ q.question_text }}</p>
+                            
+                            {% if q.options %}
+                                {% set opts = q.options|from_json %}
+                                {% if opts %}
+                                    {% for opt in opts %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="question_{{ q.id }}" value="{{ loop.index0 }}" id="q{{ q.id }}_{{ loop.index0 }}" required>
+                                        <label class="form-check-label" for="q{{ q.id }}_{{ loop.index0 }}">
+                                            {{ opt }}
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <input type="text" name="question_{{ q.id }}" class="form-control" placeholder="Ваш ответ" required>
+                                {% endif %}
+                            {% else %}
+                                <input type="text" name="question_{{ q.id }}" class="form-control" placeholder="Ваш ответ" required>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-send"></i> Отправить ответы (попытка единственная)
+                        </button>
+                    </form>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-warning">
+                Вы не зарегистрированы на этот контест. <a href="{{ url_for('contest_detail', cid=contest.id) }}">Зарегистрироваться</a>
+            </div>
+        {% endif %}
+
+    {% elif problem.problem_type == 'csv' %}
+        <!-- CSV задача -->
+        {% if participation %}
+            <!-- Кнопка скачивания тестовых данных -->
+            {% if problem.test_data_path %}
+            <div class="card p-4 mb-4 bg-light">
+                <h4><i class="bi bi-download"></i> Данные для анализа</h4>
+                <p>Скачайте тестовые данные, проанализируйте их и подготовьте предсказания.</p>
+                <a href="{{ url_for('download_test_data', cid=contest.id, pid=problem.id) }}" class="btn btn-primary">
+                    <i class="bi bi-download"></i> Скачать test.csv
+                </a>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                Тестовые данные ещё не загружены администратором.
+            </div>
+            {% endif %}
+            
+            <!-- Форма загрузки решения -->
+            <div class="card p-4">
+                <h4><i class="bi bi-file-earmark-arrow-up"></i> Отправьте ваше решение</h4>
+                <div class="alert alert-info">
+                    <strong>Формат файла:</strong> CSV с двумя колонками: <code>id</code> и <code>prediction</code>.<br>
+                    Количество строк должно совпадать с количеством строк в test.csv.
+                </div>
+                <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label class="form-label">Ваш CSV файл с предсказаниями</label>
+                        {{ form.csv_file(class="form-control") }}
+                        <small class="text-muted">Максимальный размер: 32 МБ</small>
+                    </div>
+                    {{ form.submit(class="btn btn-success") }}
+                </form>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                Вы не зарегистрированы на этот контест. <a href="{{ url_for('contest_detail', cid=contest.id) }}">Зарегистрироваться</a>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <!-- История попыток -->
+    {% if current_user.is_authenticated and user_submissions %}
+    <div class="card p-4 mt-4">
+        <h4><i class="bi bi-clock-history"></i> История попыток</h4>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Статус</th>
+                    <th>Баллы</th>
+                    <th>Детали</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sub in user_submissions %}
+                <tr>
+                    <td>{{ sub.submitted_at.strftime('%d.%m.%Y %H:%M') }}</td>
+                    <td>
+                        <span class="badge bg-{% if sub.status == 'accepted' %}success{% elif sub.status == 'partial' %}warning{% elif sub.status == 'wrong_answer' %}danger{% elif sub.status == 'error' %}dark{% else %}secondary{% endif %}">
+                            {% if sub.status == 'accepted' %}✅ Верно
+                            {% elif sub.status == 'partial' %}⚠️ Частично
+                            {% elif sub.status == 'wrong_answer' %}❌ Неверно
+                            {% elif sub.status == 'error' %}🔥 Ошибка
+                            {% else %}{{ sub.status }}{% endif %}
+                        </span>
+                    </td>
+                    <td><strong>{{ sub.score }}/{{ problem.max_score }}</strong></td>
+                    <td>
+                        {% if sub.details %}
+                            {% set details = sub.details|from_json %}
+                            {% if details.passed is defined %}
+                                Тесты: {{ details.passed }}/{{ details.total }}
+                            {% elif details.accuracy is defined %}
+                                Точность: {{ details.accuracy }}
+                            {% elif details.message is defined %}
+                                {{ details.message[:50] }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Главная — DS-548{% endblock %}
+{% block content %}
+<section class="hero">
+    <div class="container">
+        <h1>Data Science клуб школы №548</h1>
+        <p class="lead">Изучаем Python, машинное обучение и анализ данных вместе</p>
+        <a href="{{ url_for('register') }}" class="btn btn-warning btn-lg mt-3">Присоединиться</a>
+    </div>
+</section>
+
+<div class="container my-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 p-4 text-center">
+                <i class="bi bi-stack feature-icon"></i>
+                <h4>Stack Overflow</h4>
+                <p>Задавайте вопросы и помогайте одноклассникам с Python и DS</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 text-center">
+                <i class="bi bi-calendar-event feature-icon"></i>
+                <h4>Мероприятия</h4>
+                <p>Хакатоны, лекции, мастер-классы по анализу данных</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 text-center">
+                <i class="bi bi-book feature-icon"></i>
+                <h4>Документация</h4>
+                <p>Учебные материалы, туториалы и шпаргалки</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 text-center">
+                <i class="bi bi-clipboard-data feature-icon"></i>
+                <h4>Задания прошлых лет</h4>
+                <p>Архив задач с олимпиад и соревнований</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 text-center">
+                <i class="bi bi-pc-display feature-icon"></i>
+                <h4>Тестовая платформа</h4>
+                <p>Проверяйте знания по Python и Data Science</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 p-4 text-center">
+                <i class="bi bi-code-slash feature-icon"></i>
+                <h4>Python-first</h4>
+                <p>Весь курс построен вокруг экосистемы Python</p>
+            </div>
+        </div>
+    </div>
+
+    {% if events %}
+    <h2 class="mt-5 mb-4">Ближайшие мероприятия</h2>
+    <div class="row g-3">
+        {% for e in events %}
+        <div class="col-md-6">
+            <div class="card p-3">
+                <h5>{{ e.title }}</h5>
+                <small class="text-muted">{{ e.event_date.strftime('%d.%m.%Y %H:%M') }}</small>
+                <p class="mt-2 mb-0">{{ e.description[:150] }}...</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

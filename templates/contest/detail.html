@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}{{ contest.title }}{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="card p-4 mb-4">
+        <h1><i class="bi bi-trophy"></i> {{ contest.title }}</h1>
+        <p class="lead">{{ contest.description }}</p>
+        <div class="row mt-3">
+            <div class="col-md-6">
+                <p><strong>Начало:</strong> {{ contest.start_time.strftime('%d.%m.%Y %H:%M') }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Окончание:</strong> {{ contest.end_time.strftime('%d.%m.%Y %H:%M') }}</p>
+            </div>
+        </div>
+        
+        {% if current_user.is_authenticated %}
+            {% if participation %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> Вы участвуете в этом контесте
+                </div>
+            {% elif now < contest.start_time %}
+                <form method="POST" action="{{ url_for('join_contest', cid=contest.id) }}">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="bi bi-person-plus"></i> Зарегистрироваться
+                    </button>
+                </form>
+            {% elif now >= contest.start_time and now <= contest.end_time %}
+                <form method="POST" action="{{ url_for('join_contest', cid=contest.id) }}">
+                    <button type="submit" class="btn btn-success btn-lg">
+                        <i class="bi bi-play-circle"></i> Начать участие
+                    </button>
+                </form>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-warning">
+                <a href="{{ url_for('login') }}">Войдите</a>, чтобы участвовать в контесте
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="row">
+        <!-- Список задач -->
+        <div class="col-md-8">
+            <h3><i class="bi bi-list-check"></i> Задачи</h3>
+            {% if contest.problems %}
+            <div class="list-group mt-3">
+                {% for problem in contest.problems %}
+                <a href="{{ url_for('problem_detail', cid=contest.id, pid=problem.id) }}" 
+                   class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">{{ problem.title }}</h5>
+                            <small class="text-muted">{{ problem.description[:100] }}{% if problem.description|length > 100 %}...{% endif %}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-{% if problem.difficulty == 'easy' %}success{% elif problem.difficulty == 'medium' %}warning{% else %}danger{% endif %}">
+                                {{ problem.difficulty }}
+                            </span>
+                            <span class="badge bg-info ms-1">{{ problem.problem_type }}</span>
+                            <span class="badge bg-secondary ms-1">{{ problem.max_score }} баллов</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted mt-3">Задач пока нет.</p>
+            {% endif %}
+            
+            {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('create_problem', cid=contest.id) }}" class="btn btn-primary mt-3">
+                <i class="bi bi-plus-circle"></i> Добавить задачу
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Таблица лидеров -->
+        <div class="col-md-4">
+            <h3><i class="bi bi-bar-chart"></i> Лидеры</h3>
+            {% if leaderboard %}
+            <table class="table table-sm mt-3">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Участник</th>
+                        <th>Баллы</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in leaderboard %}
+                    <tr {% if p.user_id == current_user.id %}class="table-warning"{% endif %}>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ p.user.username }}</td>
+                        <td><strong>{{ p.score }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted mt-3">Пока нет участников.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

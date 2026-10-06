@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Мои мероприятия{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-calendar-check"></i> Мои предложенные мероприятия</h1>
+        <a href="{{ url_for('propose_event') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Предложить новое
+        </a>
+    </div>
+
+    {% for event in events %}
+    <div class="card p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5>{{ event.title }}</h5>
+                <small class="text-muted">
+                    <i class="bi bi-calendar"></i> {{ event.event_date.strftime('%d.%m.%Y %H:%M') }}
+                    {% if event.location %}
+                        • <i class="bi bi-geo-alt"></i> {{ event.location }}
+                    {% endif %}
+                </small>
+                <p class="mt-2 mb-0">{{ event.description[:200] }}{% if event.description|length > 200 %}...{% endif %}</p>
+            </div>
+            <div>
+                {% if event.is_approved %}
+                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> Одобрено</span>
+                {% elif event.is_rejected %}
+                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Отклонено</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> На модерации</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+        <p class="mb-0">Вы ещё не предлагали мероприятий.</p>
+        <a href="{{ url_for('propose_event') }}" class="btn btn-primary mt-2">Предложить первое мероприятие</a>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Мероприятия{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-calendar-event"></i> Мероприятия</h1>
+        {% if current_user.is_authenticated %}
+            <a href="{{ url_for('propose_event') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Предложить мероприятие
+            </a>
+        {% endif %}
+    </div>
+
+    {% for e in events %}
+    <div class="card p-4 mb-3 shadow-sm">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h4>{{ e.title }}</h4>
+                <div class="mb-2">
+                    <span class="badge bg-primary">
+                        <i class="bi bi-calendar"></i> {{ e.event_date.strftime('%d.%m.%Y %H:%M') }}
+                    </span>
+                    {% if e.location %}
+                        <span class="badge bg-secondary">
+                            <i class="bi bi-geo-alt"></i> {{ e.location }}
+                        </span>
+                    {% endif %}
+                </div>
+                <p class="mt-2 mb-0">{{ e.description }}</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center p-5">
+        <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+        <h4 class="mt-3">Мероприятий пока нет</h4>
+        <p>Войдите в аккаунт и предложите первое мероприятие!</p>
+        {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary mt-2">Войти</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

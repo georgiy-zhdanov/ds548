@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <h2>{{ title }}</h2>
+    <form method="POST" class="card p-4">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            {{ form.title.label(class="form-label") }}
+            {{ form.title(class="form-control") }}
+        </div>
+        <div class="mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control", rows=3) }}
+        </div>
+        <div class="mb-3">
+            {{ form.questions_data.label(class="form-label") }}
+            {{ form.questions_data(class="form-control", rows=10, placeholder='[{"question": "Что такое Python?", "options": ["Язык", "Змея"], "correct": 0}]') }}
+            <small class="text-muted">Формат JSON: массив вопросов с полями question, options, correct</small>
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+</div>
+{% endblock %}

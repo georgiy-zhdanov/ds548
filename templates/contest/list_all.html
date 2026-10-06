@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}DS548 Contest{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-trophy"></i> DS548 Contest</h1>
+        {% if current_user.is_authenticated and current_user.is_admin %}
+            <a href="{{ url_for('create_contest') }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Создать контест
+            </a>
+        {% endif %}
+    </div>
+
+    {% if all_contests %}
+    <div class="row g-4">
+        {% for contest in all_contests %}
+        <div class="col-md-6">
+            <div class="card p-4 h-100 {% if contest.is_active %}border-success{% else %}border-secondary{% endif %}">
+                <h4>{{ contest.title }}</h4>
+                <p>{{ contest.description[:150] }}{% if contest.description|length > 150 %}...{% endif %}</p>
+                <div class="mt-auto">
+                    <small class="text-muted d-block mb-2">
+                        <i class="bi bi-calendar"></i> {{ contest.start_time.strftime('%d.%m.%Y %H:%M') }} — {{ contest.end_time.strftime('%d.%m.%Y %H:%M') }}
+                    </small>
+                    <span class="badge bg-{% if contest.is_active %}success{% else %}secondary{% endif %}">
+                        {% if contest.is_active %}Активен{% else %}Завершён/Неактивен{% endif %}
+                    </span>
+                    <a href="{{ url_for('contest_detail', cid=contest.id) }}" class="btn btn-primary mt-2">
+                        Открыть
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center p-5">
+        <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+        <h4 class="mt-3">Контестов пока нет</h4>
+        <p>Создайте первый контест!</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

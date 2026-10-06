@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Создать задачу{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card p-4">
+                <h2><i class="bi bi-plus-circle"></i> Создать задачу для "{{ contest.title }}"</h2>
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows=10, placeholder="Условие задачи (можно использовать HTML)") }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            {{ form.problem_type.label(class="form-label") }}
+                            {{ form.problem_type(class="form-select") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.difficulty.label(class="form-label") }}
+                            {{ form.difficulty(class="form-select") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.max_score.label(class="form-label") }}
+                            {{ form.max_score(class="form-control") }}
+                        </div>
+                    </div>
+                    {% if form.problem_type.data == 'code' %}
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            {{ form.time_limit.label(class="form-label") }}
+                            {{ form.time_limit(class="form-control") }}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            {{ form.memory_limit.label(class="form-label") }}
+                            {{ form.memory_limit(class="form-control") }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    {{ form.submit(class="btn btn-success w-100") }}
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

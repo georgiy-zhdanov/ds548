@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Редактировать задачу{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('contest_list') }}">Контесты</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('contest_detail', cid=contest.id) }}">{{ contest.title }}</a></li>
+            <li class="breadcrumb-item active">{{ problem.title }}</li>
+        </ol>
+    </nav>
+
+    <h2><i class="bi bi-pencil-square"></i> Редактировать: {{ problem.title }}</h2>
+    <p class="text-muted">Тип: <strong>{{ problem.problem_type }}</strong> | Сложность: <strong>{{ problem.difficulty }}</strong> | Макс. балл: <strong>{{ problem.max_score }}</strong></p>
+
+    <!-- Тесты для code-задач -->
+    {% if problem.problem_type == 'code' %}
+    <div class="card p-4 mb-4">
+        <h4><i class="bi bi-list-ol"></i> Тесты</h4>
+        {% if tests %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Входные данные</th>
+                    <th>Ожидаемый выход</th>
+                    <th>Пример</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for test in tests %}
+                <tr>
+                    <td>{{ test.order_num }}</td>
+                    <td><code>{{ test.input_data[:50] }}{% if test.input_data|length > 50 %}...{% endif %}</code></td>
+                    <td><code>{{ test.expected_output[:50] }}{% if test.expected_output|length > 50 %}...{% endif %}</code></td>
+                    <td>{% if test.is_sample %}<span class="badge bg-success">Да</span>{% else %}<span class="badge bg-secondary">Нет</span>{% endif %}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('contest_delete_test', cid=contest.id, pid=problem.id, tid=test.id) }}" class="d-inline" onsubmit="return confirm('Удалить этот тест?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Удалить
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">Тестов пока нет. Добавьте хотя бы один пример теста.</p>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('contest_add_test', cid=contest.id, pid=problem.id) }}" class="mt-3 border-top pt-3">
+            <h5><i class="bi bi-plus-circle"></i> Добавить тест</h5>
+            <div class="row">
+                <div class="col-md-5 mb-2">
+                    <label class="form-label">Входные данные</label>
+                    <textarea name="input_data" class="form-control font-monospace" rows="3" required placeholder="Например: 5 10"></textarea>
+                </div>
+                <div class="col-md-5 mb-2">
+                    <label class="form-label">Ожидаемый выход</label>
+                    <textarea name="expected_output" class="form-control font-monospace" rows="3" required placeholder="Например: 15"></textarea>
+                </div>
+                <div class="col-md-2 mb-2">
+                    <label class="form-label">Порядок</label>
+                    <input type="number" name="order_num" class="form-control" value="{{ tests|length + 1 }}" required min="1">
+                </div>
+            </div>
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" name="is_sample" id="is_sample">
+                <label class="form-check-label" for="is_sample">
+                    Это пример теста (виден участникам)
+                </label>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Добавить тест
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Вопросы для math-задач -->
+    {% if problem.problem_type == 'math' %}
+    <div class="card p-4 mb-4">
+        <h4><i class="bi bi-question-circle"></i> Вопросы</h4>
+        {% if questions %}
+        <div class="list-group">
+            {% for q in questions %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <strong>Вопрос {{ q.order_num }}:</strong> {{ q.question_text[:150] }}{% if q.question_text|length > 150 %}...{% endif %}
+                        <br>
+                        <small class="text-muted">
+                            <i class="bi bi-star"></i> {{ q.points }} баллов
+                            {% if q.correct_answer %}
+                                | Ответ: <code>{{ q.correct_answer }}</code>
+                            {% elif q.correct_option is not none %}
+                                | Правильный вариант: {{ q.correct_option }}
+                            {% endif %}
+                            {% if q.options %}
+                                | Варианты: {{ q.options }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <form method="POST" action="{{ url_for('contest_delete_question', cid=contest.id, pid=problem.id, qid=q.id) }}" class="d-inline" onsubmit="return confirm('Удалить этот вопрос?')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-muted">Вопросов пока нет. Добавьте хотя бы один вопрос.</p>
+        {% endif %}
+        
+        <form method="POST" action="{{ url_for('contest_add_question', cid=contest.id, pid=problem.id) }}" class="mt-3 border-top pt-3">
+            <h5><i class="bi bi-plus-circle"></i> Добавить вопрос</h5>
+            <div class="mb-2">
+                <label class="form-label">Текст вопроса</label>
+                <textarea name="question_text" class="form-control" rows="3" required placeholder="Например: Чему равна производная функции x^2?"></textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label">Правильный ответ (для числовых/текстовых)</label>
+                    <input type="text" name="correct_answer" class="form-control" placeholder="Например: 2x">
+                    <small class="text-muted">Оставьте пустым, если вопрос с вариантами</small>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="form-label">Правильный вариант (0, 1, 2...)</label>
+                    <input type="number" name="correct_option" class="form-control" min="0" placeholder="0">
+                    <small class="text-muted">Индекс правильного варианта</small>
+                </div>
+                <div class="col-md-3 mb-2">
+                    <label class="form-label">Баллы</label>
+                    <input type="number" name="points" class="form-control" value="10" required min="1">
+                </div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Варианты ответов (JSON, опционально)</label>
+                <input type="text" name="options" class="form-control" placeholder='["2x", "x", "x^2", "2"]'>
+                <small class="text-muted">Формат: ["вариант1", "вариант2", "вариант3"]</small>
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Порядок</label>
+                <input type="number" name="order_num" class="form-control" value="{{ questions|length + 1 }}" required min="1">
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Добавить вопрос
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    <!-- Для CSV-задач -->
+    {% if problem.problem_type == 'csv' %}
+    <div class="card p-4 mb-4">
+        <h4><i class="bi bi-file-earmark-spreadsheet"></i> CSV задача</h4>
+        <p>Для CSV-задач необходимо загрузить эталонный файл с правильными ответами и тестовые данные для участников.</p>
+        
+        <div class="alert alert-info">
+            <strong>Формат CSV:</strong> Первая колонка — ID, вторая колонка — предсказание/ответ.<br>
+            Пример: <code>id,prediction<br>1,cat<br>2,dog</code>
+        </div>
+        
+        <!-- Загрузка тестовых данных -->
+        <div class="mb-4 p-3 border rounded">
+            <h5><i class="bi bi-download"></i> Тестовые данные (для участников)</h5>
+            {% if problem.test_data_path %}
+                <div class="alert alert-success">
+                    ✅ Тестовые данные загружены: <code>{{ problem.test_data_path|replace('/root/ds548/ds548/uploads/', '') }}</code>
+                </div>
+            {% endif %}
+            <form method="POST" action="{{ url_for('upload_test_data', cid=contest.id, pid=problem.id) }}" enctype="multipart/form-data">
+                <div class="mb-2">
+                    <label class="form-label">Файл с данными для анализа (test.csv)</label>
+                    <input type="file" name="test_data_file" class="form-control" accept=".csv" required>
+                    <small class="text-muted">Участники скачают этот файл для анализа</small>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-upload"></i> Загрузить тестовые данные
+                </button>
+            </form>
+        </div>
+        
+        <!-- Загрузка эталона -->
+        <div class="mb-4 p-3 border rounded">
+            <h5><i class="bi bi-shield-check"></i> Эталонный файл (решение)</h5>
+            {% if problem.solution_path %}
+                <div class="alert alert-success">
+                    ✅ Эталон загружен: <code>{{ problem.solution_path|replace('/root/ds548/ds548/uploads/', '') }}</code>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    ⚠️ Эталон ещё не загружен. Участники не смогут отправлять решения.
+                </div>
+            {% endif %}
+            <form method="POST" action="{{ url_for('upload_solution', cid=contest.id, pid=problem.id) }}" enctype="multipart/form-data">
+                <div class="mb-2">
+                    <label class="form-label">Эталонный файл с правильными ответами (solution.csv)</label>
+                    <input type="file" name="solution_file" class="form-control" accept=".csv" required>
+                    <small class="text-muted">Этот файл НЕ будет виден участникам. Используется только для проверки.</small>
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-upload"></i> Загрузить эталон
+                </button>
+            </form>
+        </div>
+        
+        <div class="alert alert-info mt-3">
+            <strong>💡 Как это работает:</strong> Система сравнит файл участника с эталоном и подсчитает процент правильных ответов. Баллы = (accuracy) × (макс. балл за задачу).
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Кнопки управления -->
+    <div class="mt-4">
+        <a href="{{ url_for('contest_detail', cid=contest.id) }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Вернуться к контесту
+        </a>
+    </div>
+</div>
+{% endblock %}

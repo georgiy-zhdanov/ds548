@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Мой профиль{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <div class="card p-4 mb-4">
+        <h2><i class="bi bi-person-circle"></i> {{ current_user.username }}</h2>
+        <p class="text-muted">{{ current_user.email }}</p>
+        {% if current_user.is_admin %}
+            <span class="badge bg-danger">Администратор</span>
+            <a href="{{ url_for('admin_panel') }}" class="btn btn-sm btn-outline-danger ms-2">Админ-панель</a>
+        {% endif %}
+    </div>
+
+    <!-- Мои мероприятия -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Мои мероприятия</h3>
+        <div>
+            <a href="{{ url_for('my_events') }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-list"></i> Все мои мероприятия
+            </a>
+            <a href="{{ url_for('propose_event') }}" class="btn btn-primary btn-sm">
+                <i class="bi bi-plus-circle"></i> Предложить
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        {% for event in current_user.events[:3] %}
+        <div class="col-md-4">
+            <div class="card p-3 h-100">
+                <h6>{{ event.title }}</h6>
+                <small class="text-muted">{{ event.event_date.strftime('%d.%m.%Y') }}</small>
+                <div class="mt-2">
+                    {% if event.is_approved %}
+                        <span class="badge bg-success">Одобрено</span>
+                    {% elif event.is_rejected %}
+                        <span class="badge bg-danger">Отклонено</span>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">На модерации</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <p class="text-muted">Вы ещё не предлагали мероприятий.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <hr class="my-4">
+
+    <!-- Мои статьи -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Мои статьи</h3>
+        <a href="{{ url_for('create_article') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-circle"></i> Новая статья
+        </a>
+    </div>
+
+    {% for article in articles %}
+    <div class="card p-3 mb-3">
+        <h5><a href="{{ url_for('view_article', aid=article.id) }}">{{ article.title }}</a></h5>
+        <small class="text-muted">
+            Обновлено: {{ article.updated_at.strftime('%d.%m.%Y %H:%M') }}
+        </small>
+        <p class="mt-2 mb-0">{{ article.content[:200] }}{% if article.content|length > 200 %}...{% endif %}</p>
+    </div>
+    {% else %}
+    <p class="text-muted">У вас пока нет статей. Создайте первую!</p>
+    {% endfor %}
+</div>
+{% endblock %}
