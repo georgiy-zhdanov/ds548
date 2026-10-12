@@ -30,9 +30,9 @@ class TestForm(FlaskForm):
     submit = SubmitField('Сохранить тест')
 
 class ArticleForm(FlaskForm):
-    title = StringField('Название статьи', validators=[DataRequired(), Length(max=200)])
-    content = TextAreaField('Содержание', validators=[DataRequired()])
-    submit = SubmitField('Сохранить статью')
+    title = StringField('Заголовок', validators=[DataRequired()])
+    content = TextAreaField('Содержание') # <-- Валидатор убран
+    submit = SubmitField('Сохранить')
 
 from flask_wtf.file import FileField, FileRequired, FileAllowed
 from config import Config

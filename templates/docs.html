@@ -25,7 +25,7 @@
                     </div>
                     <div class="card-footer bg-transparent border-top-0 d-flex justify-content-between align-items-center">
                         <small class="text-muted">{{ article.updated_at.strftime('%d.%m.%Y') }}</small>
-                        <a href="{{ url_for('view_article', aid=article.id) }}" class="btn btn-outline-primary btn-sm">Читать</a>
+                        <a href="{{ url_for('view_article', article_id=article.id) }}" class="btn btn-outline-primary btn-sm">Читать</a>
                     </div>
                 </div>
             </div>

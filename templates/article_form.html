@@ -3,17 +3,73 @@
 {% block content %}
 <div class="container my-5">
     <h2>{{ title }}</h2>
-    <form method="POST" class="card p-4">
+    <form method="POST" class="card p-4" enctype="multipart/form-data">
         {{ form.hidden_tag() }}
+        
         <div class="mb-3">
             {{ form.title.label(class="form-label") }}
             {{ form.title(class="form-control") }}
         </div>
+
         <div class="mb-3">
-            {{ form.content.label(class="form-label") }}
-            {{ form.content(class="form-control", rows=15) }}
+            <label class="form-label">Тип статьи</label>
+            <select name="article_type" id="article_type" class="form-select" onchange="toggleContentType()">
+                <option value="markdown" selected>Markdown (Текст)</option>
+                <option value="ipynb">Jupyter Notebook (.ipynb)</option>
+                <option value="pdf">PDF Документ (.pdf)</option>
+            </select>
         </div>
+
+        <!-- Блок для Markdown -->
+        <div id="markdown-block" class="mb-3">
+            {{ form.content.label(class="form-label") }}
+            {{ form.content(class="form-control font-monospace", rows=15) }}
+        </div>
+
+        <!-- Блок для загрузки файла -->
+        <div id="file-block" class="mb-3" style="display: none;">
+            <label class="form-label">Загрузить файл</label>
+            <input type="file" name="file" class="form-control" accept=".ipynb,.pdf">
+            <small class="text-muted">Максимальный размер: 32 МБ</small>
+        </div>
+
         {{ form.submit(class="btn btn-primary") }}
     </form>
 </div>
+
+<script>
+function toggleContentType() {
+    const type = document.getElementById('article_type').value;
+    const mdBlock = document.getElementById('markdown-block');
+    const fileBlock = document.getElementById('file-block');
+    const contentField = document.getElementById('content');
+    const fileField = document.querySelector('input[name="file"]');
+    
+    if (type === 'markdown') {
+        mdBlock.style.display = 'block';
+        fileBlock.style.display = 'none';
+        
+        // Делаем content обязательным
+        if (contentField) contentField.required = true;
+        // Убираем required с файла
+        if (fileField) fileField.required = false;
+    } else {
+        mdBlock.style.display = 'none';
+        fileBlock.style.display = 'block';
+        
+        // Убираем required с content (иначе браузер не сможет отправить форму)
+        if (contentField) {
+            contentField.required = false;
+            contentField.value = ''; // Очищаем, чтобы не отправлять пустое значение
+        }
+        // Делаем файл обязательным
+        if (fileField) fileField.required = true;
+    }
+}
+
+// Инициализация при загрузке страницы
+document.addEventListener('DOMContentLoaded', () => {
+    toggleContentType();
+});
+</script>
 {% endblock %}

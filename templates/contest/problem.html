@@ -1,7 +1,10 @@
 {% extends "base.html" %}
+
 {% block title %}{{ problem.title }}{% endblock %}
+
 {% block content %}
 <div class="container my-5">
+    <!-- Хлебные крошки -->
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('contest_list') }}">Контесты</a></li>
@@ -10,17 +13,18 @@
         </ol>
     </nav>
 
+    <!-- Карточка задачи -->
     <div class="card p-4 mb-4">
         <h2>{{ problem.title }}</h2>
         <div class="mb-3">
             <span class="badge bg-{% if problem.difficulty == 'easy' %}success{% elif problem.difficulty == 'medium' %}warning{% else %}danger{% endif %}">
                 {{ problem.difficulty }}
             </span>
-            <span class="badge bg-info">{{ problem.problem_type }}</span>
+            <span class="badge bg-info text-dark">{{ problem.problem_type }}</span>
             <span class="badge bg-secondary">{{ problem.max_score }} баллов</span>
             {% if problem.problem_type == 'code' %}
-                <span class="badge bg-dark">{{ problem.time_limit }} сек</span>
-                <span class="badge bg-dark">{{ problem.memory_limit }} МБ</span>
+                <span class="badge bg-dark">⏱️ {{ problem.time_limit }} сек</span>
+                <span class="badge bg-dark">💾 {{ problem.memory_limit }} МБ</span>
             {% endif %}
         </div>
         <div class="problem-statement">
@@ -28,8 +32,8 @@
         </div>
     </div>
 
+    <!-- Форма отправки для Code задач -->
     {% if problem.problem_type == 'code' %}
-        <!-- Code задача -->
         {% if sample_tests %}
         <div class="card p-4 mb-4">
             <h4><i class="bi bi-code-square"></i> Примеры тестов</h4>
@@ -47,7 +51,8 @@
         {% if participation %}
         <div class="card p-4">
             <h4><i class="bi bi-send"></i> Отправить решение</h4>
-            <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}">
+            <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" 
+                  onsubmit="let btn = this.querySelector('button[type=submit], input[type=submit]'); if(btn) { btn.disabled = true; btn.value = 'Проверка...'; btn.innerText = 'Проверка...'; } return true;">
                 {{ form.hidden_tag() }}
                 <div class="mb-3">
                     {{ form.code.label(class="form-label") }}
@@ -58,43 +63,31 @@
         </div>
         {% endif %}
 
+    <!-- Форма отправки для Math задач -->
     {% elif problem.problem_type == 'math' %}
-        <!-- Math задача -->
         {% if participation %}
             {% if existing_math_submission %}
-                <!-- Попытка уже была — показываем результат -->
                 <div class="card p-4 mb-4">
                     <h4><i class="bi bi-check-circle"></i> Ваши ответы</h4>
                     <div class="alert alert-info">
                         <strong>Вы уже отправили ответы на эту задачу.</strong><br>
                         Ваш результат: <strong>{{ existing_math_submission.score }}/{{ problem.max_score }}</strong> баллов
                     </div>
-                    
                     {% if existing_math_submission.details %}
                         {% set details = existing_math_submission.details|from_json %}
                         {% if details.questions is defined %}
                         <div class="mt-3">
                             <h5>Детализация ответов:</h5>
                             <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Вопрос</th>
-                                        <th>Ваш ответ</th>
-                                        <th>Результат</th>
-                                        <th>Баллы</th>
-                                    </tr>
-                                </thead>
+                                <thead><tr><th>Вопрос</th><th>Ваш ответ</th><th>Результат</th><th>Баллы</th></tr></thead>
                                 <tbody>
                                     {% for q_result in details.questions %}
                                     <tr>
                                         <td>Вопрос {{ loop.index }}</td>
                                         <td><code>{{ q_result.user_answer if q_result.user_answer else '(пусто)' }}</code></td>
                                         <td>
-                                            {% if q_result.is_correct %}
-                                                <span class="badge bg-success">✅ Верно</span>
-                                            {% else %}
-                                                <span class="badge bg-danger">❌ Неверно</span>
-                                            {% endif %}
+                                            {% if q_result.is_correct %}<span class="badge bg-success">✅ Верно</span>
+                                            {% else %}<span class="badge bg-danger">❌ Неверно</span>{% endif %}
                                         </td>
                                         <td>{{ q_result.points }}</td>
                                     </tr>
@@ -106,27 +99,24 @@
                     {% endif %}
                 </div>
             {% else %}
-                <!-- Попытки ещё не было — показываем форму -->
                 <div class="card p-4">
                     <h4><i class="bi bi-pencil-square"></i> Ответьте на вопросы</h4>
                     <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> <strong>Внимание:</strong> У вас есть только одна попытка! После отправки изменить ответы будет невозможно.
+                        <i class="bi bi-exclamation-triangle"></i> <strong>Внимание:</strong> У вас есть только одна попытка!
                     </div>
-                    <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" onsubmit="return confirm('Вы уверены? После отправки изменить ответы будет невозможно!')">
+                    <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" 
+                          onsubmit="return confirm('Вы уверены? После отправки изменить ответы будет невозможно!')">
                         {% for q in questions %}
                         <div class="mb-4 p-3 border rounded">
                             <p><strong>Вопрос {{ loop.index }} ({{ q.points }} баллов):</strong></p>
                             <p>{{ q.question_text }}</p>
-                            
                             {% if q.options %}
                                 {% set opts = q.options|from_json %}
                                 {% if opts %}
                                     {% for opt in opts %}
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="question_{{ q.id }}" value="{{ loop.index0 }}" id="q{{ q.id }}_{{ loop.index0 }}" required>
-                                        <label class="form-check-label" for="q{{ q.id }}_{{ loop.index0 }}">
-                                            {{ opt }}
-                                        </label>
+                                        <label class="form-check-label" for="q{{ q.id }}_{{ loop.index0 }}">{{ opt }}</label>
                                     </div>
                                     {% endfor %}
                                 {% else %}
@@ -137,22 +127,17 @@
                             {% endif %}
                         </div>
                         {% endfor %}
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-send"></i> Отправить ответы (попытка единственная)
-                        </button>
+                        <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-send"></i> Отправить ответы</button>
                     </form>
                 </div>
             {% endif %}
         {% else %}
-            <div class="alert alert-warning">
-                Вы не зарегистрированы на этот контест. <a href="{{ url_for('contest_detail', cid=contest.id) }}">Зарегистрироваться</a>
-            </div>
+            <div class="alert alert-warning">Вы не зарегистрированы на этот контест. <a href="{{ url_for('contest_detail', cid=contest.id) }}">Зарегистрироваться</a></div>
         {% endif %}
 
+    <!-- Форма отправки для CSV задач -->
     {% elif problem.problem_type == 'csv' %}
-        <!-- CSV задача -->
         {% if participation %}
-            <!-- Кнопка скачивания тестовых данных -->
             {% if problem.test_data_path %}
             <div class="card p-4 mb-4 bg-light">
                 <h4><i class="bi bi-download"></i> Данные для анализа</h4>
@@ -162,22 +147,19 @@
                 </a>
             </div>
             {% else %}
-            <div class="alert alert-warning">
-                Тестовые данные ещё не загружены администратором.
-            </div>
+            <div class="alert alert-warning">Тестовые данные ещё не загружены администратором.</div>
             {% endif %}
             
-            <!-- Форма загрузки решения -->
             <div class="card p-4">
                 <h4><i class="bi bi-file-earmark-arrow-up"></i> Отправьте ваше решение</h4>
                 <div class="alert alert-info">
-                    <strong>Формат файла:</strong> CSV с двумя колонками: <code>id</code> и <code>prediction</code>.<br>
-                    Количество строк должно совпадать с количеством строк в test.csv.
+                    <strong>Формат файла:</strong> CSV с колонками <code>id</code> и <code>prediction</code>.
                 </div>
-                <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('submit_solution', cid=contest.id, pid=problem.id) }}" enctype="multipart/form-data"
+                      onsubmit="let btn = this.querySelector('button[type=submit], input[type=submit]'); if(btn) { btn.disabled = true; btn.value = 'Отправка...'; btn.innerText = 'Отправка...'; } return true;">
                     {{ form.hidden_tag() }}
                     <div class="mb-3">
-                        <label class="form-label">Ваш CSV файл с предсказаниями</label>
+                        {{ form.csv_file.label(class="form-label") }}
                         {{ form.csv_file(class="form-control") }}
                         <small class="text-muted">Максимальный размер: 32 МБ</small>
                     </div>
@@ -185,9 +167,7 @@
                 </form>
             </div>
         {% else %}
-            <div class="alert alert-warning">
-                Вы не зарегистрированы на этот контест. <a href="{{ url_for('contest_detail', cid=contest.id) }}">Зарегистрироваться</a>
-            </div>
+            <div class="alert alert-warning">Вы не зарегистрированы на этот контест. <a href="{{ url_for('contest_detail', cid=contest.id) }}">Зарегистрироваться</a></div>
         {% endif %}
     {% endif %}
 
@@ -195,45 +175,60 @@
     {% if current_user.is_authenticated and user_submissions %}
     <div class="card p-4 mt-4">
         <h4><i class="bi bi-clock-history"></i> История попыток</h4>
-        <table class="table table-sm">
-            <thead>
-                <tr>
-                    <th>Время</th>
-                    <th>Статус</th>
-                    <th>Баллы</th>
-                    <th>Детали</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sub in user_submissions %}
-                <tr>
-                    <td>{{ sub.submitted_at.strftime('%d.%m.%Y %H:%M') }}</td>
-                    <td>
-                        <span class="badge bg-{% if sub.status == 'accepted' %}success{% elif sub.status == 'partial' %}warning{% elif sub.status == 'wrong_answer' %}danger{% elif sub.status == 'error' %}dark{% else %}secondary{% endif %}">
-                            {% if sub.status == 'accepted' %}✅ Верно
-                            {% elif sub.status == 'partial' %}⚠️ Частично
-                            {% elif sub.status == 'wrong_answer' %}❌ Неверно
-                            {% elif sub.status == 'error' %}🔥 Ошибка
-                            {% else %}{{ sub.status }}{% endif %}
-                        </span>
-                    </td>
-                    <td><strong>{{ sub.score }}/{{ problem.max_score }}</strong></td>
-                    <td>
-                        {% if sub.details %}
-                            {% set details = sub.details|from_json %}
-                            {% if details.passed is defined %}
-                                Тесты: {{ details.passed }}/{{ details.total }}
-                            {% elif details.accuracy is defined %}
-                                Точность: {{ details.accuracy }}
-                            {% elif details.message is defined %}
-                                {{ details.message[:50] }}
-                            {% endif %}
+        {% for sub in user_submissions %}
+        <div class="mb-4 p-3 border rounded {% if sub.status == 'accepted' %}border-success bg-success bg-opacity-10{% elif sub.status == 'partial' %}border-warning bg-warning bg-opacity-10{% else %}border-danger bg-danger bg-opacity-10{% endif %}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <!-- Глобальный статус попытки с правильными цветами -->
+                    <span class="badge bg-{% if sub.status == 'accepted' %}success{% elif sub.status == 'partial' %}warning text-dark{% elif sub.status == 'wrong_answer' %}danger{% elif sub.status == 'time_limit_exceeded' %}warning text-dark{% elif sub.status == 'memory_limit_exceeded' %}info text-dark{% elif sub.status == 'runtime_error' %}dark{% elif sub.status == 'output_limit_exceeded' %}secondary{% elif sub.status == 'sandbox_error' %}dark{% else %}secondary{% endif %} fs-6">
+                        {% if sub.status == 'accepted' %}✅ Accepted
+                        {% elif sub.status == 'partial' %}⚠️ Partial
+                        {% elif sub.status == 'wrong_answer' %}❌ Wrong Answer
+                        {% elif sub.status == 'time_limit_exceeded' %}⏱️ Time Limit Exceeded
+                        {% elif sub.status == 'memory_limit_exceeded' %}💾 Memory Limit Exceeded
+                        {% elif sub.status == 'runtime_error' %}💥 Runtime Error
+                        {% elif sub.status == 'output_limit_exceeded' %}📄 Output Limit Exceeded
+                        {% elif sub.status == 'sandbox_error' %}🔧 Sandbox Error
+                        {% else %}{{ sub.status }}{% endif %}
+                    </span>
+                    <strong class="ms-2">{{ sub.score }} / {{ problem.max_score }} баллов</strong>
+                </div>
+                <small class="text-muted">{{ sub.submitted_at.strftime('%d.%m.%Y %H:%M:%S') }}</small>
+            </div>
+
+            <!-- Детали по тестам -->
+            {% if sub.details %}
+                {% set details = sub.details|from_json %}
+                {% if details.tests is defined %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for t in details.tests %}
+                        {% if t.status == 'passed' %}
+                            <span class="badge bg-success fs-6 px-3 py-2">Тест #{{ t.test }}: ✅ OK</span>
+                        {% elif t.status == 'wrong_answer' %}
+                            <span class="badge bg-danger fs-6 px-3 py-2">Тест #{{ t.test }}: ❌ Wrong Answer</span>
+                        {% elif t.status == 'time_limit_exceeded' %}
+                            <span class="badge bg-warning text-dark fs-6 px-3 py-2">Тест #{{ t.test }}: ⏱️ Time Limit</span>
+                        {% elif t.status == 'memory_limit_exceeded' %}
+                            <span class="badge bg-info text-dark fs-6 px-3 py-2">Тест #{{ t.test }}: 💾 Memory Limit</span>
+                        {% elif t.status == 'runtime_error' %}
+                            <span class="badge bg-dark fs-6 px-3 py-2">Тест #{{ t.test }}: 💥 Runtime Error</span>
+                        {% elif t.status == 'output_limit_exceeded' %}
+                            <span class="badge bg-secondary fs-6 px-3 py-2">Тест #{{ t.test }}: 📄 Output Limit</span>
+                        {% elif t.status == 'sandbox_error' %}
+                            <span class="badge bg-dark fs-6 px-3 py-2">Тест #{{ t.test }}: 🔧 Sandbox Error</span>
+                        {% else %}
+                            <span class="badge bg-secondary fs-6 px-3 py-2">Тест #{{ t.test }}: {{ t.status }}</span>
                         {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                    {% endfor %}
+                </div>
+                {% elif details.message is defined %}
+                    <div class="alert alert-danger mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> {{ details.message }}
+                    </div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endfor %}
     </div>
     {% endif %}
 </div>

@@ -60,7 +60,7 @@
 
     {% for article in articles %}
     <div class="card p-3 mb-3">
-        <h5><a href="{{ url_for('view_article', aid=article.id) }}">{{ article.title }}</a></h5>
+        <h5><a href="{{ url_for('view_article', article_id=article.id) }}">{{ article.title }}</a></h5>
         <small class="text-muted">
             Обновлено: {{ article.updated_at.strftime('%d.%m.%Y %H:%M') }}
         </small>

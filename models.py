@@ -2,6 +2,7 @@ from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+import markdown
 
 db = SQLAlchemy()
 
@@ -72,10 +73,26 @@ class Test(db.Model):
 class Article(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
-    content = db.Column(db.Text, nullable=False)
+    content = db.Column(db.Text, nullable=True)  # Теперь может быть None, если это файл
+    article_type = db.Column(db.String(20), default='markdown')  # 'markdown', 'ipynb', 'pdf'
+    file_path = db.Column(db.String(255), nullable=True)         # Путь к файлу в static/uploads
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def get_html_content(self):
+        """Рендерит Markdown в HTML (только если тип статьи markdown)"""
+        if not self.content or self.article_type != 'markdown':
+            return ""
+        
+        import markdown
+        clean_content = self.content.replace('\r\n', '\n').replace('\r', '\n')
+        md = markdown.Markdown(extensions=[
+            'fenced_code', 'codehilite', 'tables', 'sane_lists'
+        ], extension_configs={
+            'codehilite': {'css_class': 'highlight', 'linenums': False, 'noclasses': False}
+        })
+        return md.convert(clean_content)
 
 class Folder(db.Model):
     id = db.Column(db.Integer, primary_key=True)

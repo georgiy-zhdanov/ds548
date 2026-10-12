@@ -1,9 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from config import Config
-from models import db, User, Question, Answer, Event, Task, Test, Article, Folder, File
-from forms import (RegisterForm, LoginForm, QuestionForm, AnswerForm, 
-                   TestForm, ArticleForm, FolderForm, FileUploadForm, EventForm)
+
 import json
 import os
 import uuid
@@ -24,9 +22,29 @@ import subprocess
 import tempfile
 
 from datetime import datetime
+import signal
+
+from judge_runner import check_code_submission
+
+import os
+import uuid
+from werkzeug.utils import secure_filename
+import nbformat
+from nbconvert import HTMLExporter
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Настройки загрузок
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'articles')
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 32 * 1024 * 1024  # Максимум 32 МБ
+
+ALLOWED_EXTENSIONS = {'ipynb', 'pdf'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 db.init_app(app)
 login_manager = LoginManager(app)
@@ -419,26 +437,105 @@ def take_test(tid):
 # СТАТЬИ
 # ============================================
 
-@app.route('/article/new', methods=['GET', 'POST'])
+@app.route('/article/create', methods=['GET', 'POST'])
 @login_required
 def create_article():
     form = ArticleForm()
-    if form.validate_on_submit():
-        article = Article(
+
+    if request.method == 'POST':
+        article_type = request.form.get('article_type', 'markdown')
+        file_path = None
+        content_data = ""
+
+        # Проверка заголовка
+        if not form.title.data or not form.title.data.strip():
+            flash('Заголовок статьи обязателен.', 'danger')
+            return render_template('article_form.html', form=form, title="Создать статью")
+
+        # 1. Обработка Markdown
+        if article_type == 'markdown':
+            if not form.content.data or not form.content.data.strip():
+                flash('Для типа "Markdown" необходимо заполнить содержание.', 'danger')
+                return render_template('article_form.html', form=form, title="Создать статью")
+            content_data = form.content.data
+
+        # 2. Обработка файлов (ipynb, pdf)
+        else:
+            if 'file' not in request.files:
+                flash('Необходимо выбрать файл.', 'danger')
+                return render_template('article_form.html', form=form, title="Создать статью")
+
+            file = request.files['file']
+            if file.filename == '':
+                flash('Файл не выбран.', 'danger')
+                return render_template('article_form.html', form=form, title="Создать статью")
+
+            # Проверяем расширение
+            allowed = {'ipynb', 'pdf'}
+            ext = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else ''
+            if ext not in allowed:
+                flash(f'Недопустимый формат файла. Разрешены: {", ".join(allowed)}', 'danger')
+                return render_template('article_form.html', form=form, title="Создать статью")
+
+            # Сохраняем файл
+            import os, uuid
+            from werkzeug.utils import secure_filename
+
+            upload_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads', 'articles')
+            os.makedirs(upload_folder, exist_ok=True)
+
+            filename = secure_filename(file.filename)
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            filepath = os.path.join(upload_folder, unique_filename)
+            file.save(filepath)
+
+            file_path = f"uploads/articles/{unique_filename}"
+
+        # 3. Создаём статью
+        new_article = Article(
             title=form.title.data,
-            content=form.content.data,
+            content=content_data,
+            article_type=article_type,
+            file_path=file_path,
             author_id=current_user.id
         )
-        db.session.add(article)
+        db.session.add(new_article)
         db.session.commit()
-        flash('Статья создана', 'success')
-        return redirect(url_for('view_article', aid=article.id))
-    return render_template('article_form.html', form=form, title='Создать статью')
 
-@app.route('/article/<int:aid>')
-def view_article(aid):
-    article = Article.query.get_or_404(aid)
-    return render_template('article_view.html', article=article)
+        flash('Статья успешно создана!', 'success')
+        return redirect(url_for('view_article', article_id=new_article.id))
+
+    # GET-запрос — возвращаем форму
+    return render_template('article_form.html', form=form, title="Создать статью")
+
+
+@app.route('/article/<int:article_id>')
+def view_article(article_id):
+    article = Article.query.get_or_404(article_id)
+    notebook_html = None
+    
+    if article.article_type == 'ipynb' and article.file_path:
+        # Конвертируем IPYNB в HTML на лету
+        full_path = os.path.join(app.config['UPLOAD_FOLDER'], os.path.basename(article.file_path))
+        if os.path.exists(full_path):
+            try:
+                with open(full_path, 'r', encoding='utf-8') as f:
+                    nb = nbformat.read(f, as_version=4)
+                
+                # Используем простой и чистый шаблон
+                html_exporter = HTMLExporter()
+                html_exporter.template_name = 'classic'
+                html_exporter.exclude_input_prompt = True # Убираем "In [1]:"
+                body, resources = html_exporter.from_notebook_node(nb)
+                notebook_html = body
+            except Exception as e:
+                notebook_html = f"<div class='alert alert-danger'>Ошибка чтения ноутбука: {e}</div>"
+
+    return render_template(
+        'article_view.html', 
+        article=article, 
+        notebook_html=notebook_html
+    )
 
 @app.route('/article/<int:aid>/edit', methods=['GET', 'POST'])
 @login_required
@@ -472,22 +569,27 @@ def delete_article(aid):
 # API ДЛЯ INLINE-РЕДАКТИРОВАНИЯ СТАТЕЙ
 # ============================================
 
-@app.route('/api/article/<int:aid>/save', methods=['POST'])
+@app.route('/api/article/<int:article_id>/save', methods=['POST'])
 @login_required
-def api_save_article(aid):
-    article = Article.query.get_or_404(aid)
+def save_article(article_id):
+    article = Article.query.get_or_404(article_id)
+    
     if article.author_id != current_user.id and not current_user.is_admin:
-        return jsonify({'error': 'Нет прав'}), 403
+        return jsonify({'success': False, 'error': 'Нет прав'}), 403
     
     data = request.get_json()
     article.title = data.get('title', article.title)
     article.content = data.get('content', article.content)
+    
     db.session.commit()
+    
+    # Рендерим Markdown в HTML
+    html_content = article.get_html_content()
     
     return jsonify({
         'success': True,
         'title': article.title,
-        'content': article.content,
+        'html_content': html_content,  # <-- Возвращаем отрендеренный HTML
         'updated_at': article.updated_at.strftime('%d.%m.%Y %H:%M')
     })
 
@@ -760,70 +862,6 @@ def submit_solution(cid, pid):
     flash('Неизвестный тип задачи', 'danger')
     return redirect(url_for('problem_detail', cid=cid, pid=pid))
 
-def check_code_submission(submission, problem):
-    """Проверяет код пользователя на всех тестах задачи"""
-    tests = ProblemTest.query.filter_by(problem_id=problem.id).order_by(ProblemTest.order_num).all()
-    
-    if not tests:
-        return 'error', 0, {'message': 'Нет тестов для проверки'}
-    
-    passed = 0
-    total = len(tests)
-    details = []
-    
-    # Сохраняем код во временный файл
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False, dir='/tmp') as f:
-        f.write(submission.code)
-        temp_file = f.name
-    
-    try:
-        for i, test in enumerate(tests, 1):
-            try:
-                # Запускаем код с входными данными через stdin
-                result = subprocess.run(
-                    ['python3', temp_file],
-                    input=test.input_data,
-                    capture_output=True,
-                    text=True,
-                    timeout=problem.time_limit
-                )
-                
-                # Сравниваем вывод (убираем лишние пробелы и переносы)
-                actual = result.stdout.strip()
-                expected = test.expected_output.strip()
-                
-                if actual == expected:
-                    passed += 1
-                    details.append({'test': i, 'status': 'passed'})
-                else:
-                    details.append({
-                        'test': i, 
-                        'status': 'wrong_answer',
-                        'expected': expected[:100],
-                        'actual': actual[:100] if actual else '(пусто)'
-                    })
-            except subprocess.TimeoutExpired:
-                details.append({'test': i, 'status': 'time_limit_exceeded'})
-            except Exception as e:
-                details.append({'test': i, 'status': 'runtime_error', 'message': str(e)[:100]})
-    
-    finally:
-        # Удаляем временный файл
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
-    
-    # Подсчитываем баллы
-    score = int((passed / total) * problem.max_score) if total > 0 else 0
-    
-    # Определяем статус
-    if passed == total:
-        status = 'accepted'
-    elif passed > 0:
-        status = 'partial'
-    else:
-        status = 'wrong_answer'
-    
-    return status, score, {'tests': details, 'passed': passed, 'total': total}
 
 def submit_code_solution(cid, pid, problem, participation):
     """Отправка и проверка code-решения"""
@@ -843,7 +881,11 @@ def submit_code_solution(cid, pid, problem, participation):
         
         # Запускаем проверку кода
         try:
-            status, score, details = check_code_submission(submission, problem)
+            # Получаем тесты для задачи
+            tests = ProblemTest.query.filter_by(problem_id=problem.id).order_by(ProblemTest.order_num).all()
+
+            # Вызываем функцию проверки из judge_runner.py
+            status, score, details = check_code_submission(submission, problem, tests)
             
             submission.status = status
             submission.score = score
