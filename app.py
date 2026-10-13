@@ -210,8 +210,9 @@ def my_events():
 @app.route('/docs')
 def docs():
     articles = Article.query.order_by(Article.updated_at.desc()).all()
-    return render_template('docs.html', articles=articles)
-
+    modules = Module.query.order_by(Module.order_num, Module.id).all()
+    return render_template('docs.html', articles=articles, modules=modules)
+    
 # ============================================
 # ЗАДАНИЯ ПРОШЛЫХ ЛЕТ (ФАЙЛОВОЕ ХРАНИЛИЩЕ)
 # ============================================
@@ -1376,6 +1377,115 @@ def download_test_data(cid, pid):
 # ============================================
 # ЗАПУСК ПРИЛОЖЕНИЯ
 # ============================================
+
+
+# ==================== МОДУЛИ (группировка уроков) ====================
+from models import Module
+
+
+@app.route('/modules')
+def module_list():
+    modules = Module.query.order_by(Module.order_num, Module.id).all()
+    return render_template('modules.html', modules=modules)
+
+
+@app.route('/module/<int:mid>')
+def module_view(mid):
+    module = Module.query.get_or_404(mid)
+    lessons = Article.query.filter_by(module_id=mid).order_by(Article.order_num, Article.id).all()
+    all_articles = Article.query.order_by(Article.title).all()
+    all_modules = Module.query.order_by(Module.order_num, Module.id).all()
+    return render_template('module_view.html', module=module, lessons=lessons,
+                           all_articles=all_articles, all_modules=all_modules)
+
+
+@app.route('/module/create', methods=['GET', 'POST'])
+@login_required
+def module_create():
+    if not current_user.is_admin:
+        flash('Создавать модули может только администратор', 'danger')
+        return redirect(url_for('module_list'))
+    if request.method == 'POST':
+        title = (request.form.get('title') or '').strip()
+        if not title:
+            flash('Название модуля обязательно', 'danger')
+            return render_template('module_form.html', module=None, title='Новый модуль')
+        try:
+            order_num = int(request.form.get('order_num') or 0)
+        except ValueError:
+            order_num = 0
+        m = Module(title=title,
+                   description=(request.form.get('description') or '').strip(),
+                   order_num=order_num,
+                   author_id=current_user.id)
+        db.session.add(m)
+        db.session.commit()
+        flash('Модуль создан', 'success')
+        return redirect(url_for('module_view', mid=m.id))
+    return render_template('module_form.html', module=None, title='Новый модуль')
+
+
+@app.route('/module/<int:mid>/edit', methods=['GET', 'POST'])
+@login_required
+def module_edit(mid):
+    if not current_user.is_admin:
+        flash('Редактировать модули может только администратор', 'danger')
+        return redirect(url_for('module_list'))
+    module = Module.query.get_or_404(mid)
+    if request.method == 'POST':
+        title = (request.form.get('title') or '').strip()
+        if title:
+            module.title = title
+        module.description = (request.form.get('description') or '').strip()
+        try:
+            module.order_num = int(request.form.get('order_num') or 0)
+        except ValueError:
+            pass
+        db.session.commit()
+        flash('Модуль обновлён', 'success')
+        return redirect(url_for('module_view', mid=module.id))
+    return render_template('module_form.html', module=module, title='Редактировать модуль')
+
+
+@app.route('/module/<int:mid>/delete', methods=['POST'])
+@login_required
+def module_delete(mid):
+    if not current_user.is_admin:
+        flash('Удалять модули может только администратор', 'danger')
+        return redirect(url_for('module_list'))
+    module = Module.query.get_or_404(mid)
+    for a in Article.query.filter_by(module_id=mid).all():
+        a.module_id = None
+    db.session.delete(module)
+    db.session.commit()
+    flash('Модуль удалён, уроки сохранены', 'success')
+    return redirect(url_for('module_list'))
+
+
+@app.route('/article/assign_module', methods=['POST'])
+@login_required
+def article_assign_module():
+    if not current_user.is_admin:
+        flash('Назначать модули может только администратор', 'danger')
+        return redirect(url_for('module_list'))
+    aid = (request.form.get('article_id') or '').strip()
+    if not aid.isdigit():
+        flash('Урок не выбран', 'danger')
+        return redirect(url_for('module_list'))
+    article = Article.query.get(int(aid))
+    if not article:
+        flash('Урок не найден', 'danger')
+        return redirect(url_for('module_list'))
+    mid_raw = (request.form.get('module_id') or '').strip()
+    article.module_id = int(mid_raw) if mid_raw.isdigit() else None
+    order_raw = (request.form.get('order_num') or '0').strip()
+    article.order_num = int(order_raw) if order_raw.lstrip('-').isdigit() else 0
+    db.session.commit()
+    flash('Урок обновлён', 'success')
+    if article.module_id:
+        return redirect(url_for('module_view', mid=article.module_id))
+    return redirect(url_for('module_list'))
+
 
 if __name__ == '__main__':
     with app.app_context():

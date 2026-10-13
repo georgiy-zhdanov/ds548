@@ -75,6 +75,8 @@ class Article(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=True)  # Теперь может быть None, если это файл
     article_type = db.Column(db.String(20), default='markdown')  # 'markdown', 'ipynb', 'pdf'
+    module_id = db.Column(db.Integer, db.ForeignKey('module.id'), nullable=True)
+    order_num = db.Column(db.Integer, default=0, nullable=False)
     file_path = db.Column(db.String(255), nullable=True)         # Путь к файлу в static/uploads
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -217,3 +219,18 @@ class Submission(db.Model):
     submitted_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     user = db.relationship('User', backref='submissions')
+
+
+class Module(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    order_num = db.Column(db.Integer, default=0, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    articles = db.relationship('Article', backref='module', lazy=True)
+
+    def __repr__(self):
+        return f'<Module {self.title}>'

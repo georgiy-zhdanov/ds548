@@ -2,15 +2,42 @@
 {% block title %}Документация и Статьи{% endblock %}
 {% block content %}
 <div class="container my-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1><i class="bi bi-book"></i> Документация и Статьи</h1>
-        {% if current_user.is_authenticated %}
-            <a href="{{ url_for('create_article') }}" class="btn btn-primary">
-                <i class="bi bi-plus-circle"></i> Написать статью
-            </a>
-        {% endif %}
+    <div class="mb-4">
+        <h1 class="mb-3"><i class="bi bi-book"></i> Документация и Статьи</h1>
+
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <!-- Выпадающий список модулей -->
+            <select class="form-select" style="min-width: 240px; max-width: 320px;" onchange="if(this.value) window.location.href=this.value;">
+                <option value="">📦 Перейти к модулю...</option>
+                {% if modules %}
+                    {% for module in modules %}
+                        <option value="{{ url_for('module_view', mid=module.id) }}">{{ module.title }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="{{ url_for('module_list') }}">Открыть все модули</option>
+                {% endif %}
+            </select>
+
+            <!-- Выпадающий список статей -->
+            <select class="form-select" style="min-width: 240px; max-width: 320px;" onchange="if(this.value) window.location.href=this.value;">
+                <option value="">📄 Перейти к статье...</option>
+                {% if articles %}
+                    {% for article in articles %}
+                        <option value="{{ url_for('view_article', article_id=article.id) }}">{{ article.title }}</option>
+                    {% endfor %}
+                {% else %}
+                    <option value="" disabled>Статей пока нет</option>
+                {% endif %}
+            </select>
+
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('create_article') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Написать статью
+                </a>
+            {% endif %}
+        </div>
     </div>
-    
+
     {% if articles %}
         <div class="row g-4">
             {% for article in articles %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}{{ module.title }}{% endblock %}
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/modules">Модули</a></li>
+            <li class="breadcrumb-item active">{{ module.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="card p-4 mb-4">
+        <h2>{{ module.title }}</h2>
+        {% if module.description %}<p class="text-muted">{{ module.description }}</p>{% endif %}
+        {% if current_user.is_authenticated and current_user.is_admin %}
+        <div class="mt-2 d-flex gap-2">
+            <a href="/module/{{ module.id }}/edit" class="btn btn-sm btn-outline-primary">Редактировать</a>
+            <form method="POST" action="/module/{{ module.id }}/delete"
+                  onsubmit="return confirm('Удалить модуль? Уроки останутся, но станут без модуля.')">
+                <button class="btn btn-sm btn-outline-danger">Удалить</button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card p-4 mb-4">
+        <h4><i class="bi bi-list-ol"></i> Уроки модуля</h4>
+        {% if lessons %}
+        <div class="list-group">
+            {% for a in lessons %}
+            <div class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <span class="badge bg-secondary me-2">{{ loop.index }}</span>
+                    <a href="{{ url_for('view_article', article_id=a.id) }}">{{ a.title }}</a>
+                    <span class="badge bg-light text-dark ms-2">{{ a.article_type }}</span>
+                </div>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <form method="POST" action="/article/assign_module" class="d-flex gap-2 align-items-center">
+                    <input type="hidden" name="article_id" value="{{ a.id }}">
+                    <select name="module_id" class="form-select form-select-sm" style="width:auto">
+                        <option value="">Без модуля</option>
+                        {% for m in all_modules %}
+                        <option value="{{ m.id }}" {% if m.id == module.id %}selected{% endif %}>{{ m.title }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" name="order_num" value="{{ a.order_num or loop.index }}"
+                           class="form-control form-control-sm" style="width:90px" title="Порядок">
+                    <button class="btn btn-sm btn-outline-secondary">Сохранить</button>
+                </form>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="alert alert-warning mb-0">В этом модуле пока нет уроков.</div>
+        {% endif %}
+    </div>
+
+    {% if current_user.is_authenticated and current_user.is_admin %}
+    <div class="card p-4">
+        <h5><i class="bi bi-plus-circle"></i> Назначить урок на модуль</h5>
+        <form method="POST" action="/article/assign_module" class="row g-2 align-items-end">
+            <input type="hidden" name="module_id" value="{{ module.id }}">
+            <div class="col-md-7">
+                <label class="form-label">Урок</label>
+                <select name="article_id" class="form-select" required>
+                    {% for a in all_articles %}
+                    <option value="{{ a.id }}">{{ a.title }}{% if a.module_id %} (уже в модуле){% endif %}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Порядок</label>
+                <input type="number" name="order_num" class="form-control" value="{{ (lessons|length) + 1 }}">
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-primary w-100">Добавить</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
